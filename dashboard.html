@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Admin — ZAVIX STORE</title>
+  <meta name="robots" content="noindex, nofollow" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0a0a; }
+    ::-webkit-scrollbar-thumb { background: #22c55e; border-radius: 999px; }
+
+    .status-badge {
+      display: inline-flex; align-items: center; padding: 2px 10px;
+      border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.03em;
+    }
+    .status-pending   { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+    .status-confirmed { background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
+    .status-shipped   { background: rgba(167,139,250,0.15); color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); }
+    .status-delivered { background: rgba(34,197,94,0.15);  color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+    .status-returned  { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+
+    .stat-card { background: linear-gradient(135deg, #111827 0%, #0f172a 100%); }
+  </style>
+</head>
+
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+  <!-- ══════════════════════════════════════════
+       LOGIN OVERLAY
+  ══════════════════════════════════════════ -->
+  <div id="login-overlay"
+    class="fixed inset-0 z-50 bg-gray-950 flex items-center justify-center px-4">
+    <div class="w-full max-w-sm bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl p-8">
+      <div class="text-center mb-7">
+        <span class="text-green-400 font-black text-xl">ZAVIX<span class="text-white">STORE</span></span>
+        <p class="text-gray-400 text-sm mt-2">Panneau d'administration</p>
+      </div>
+
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-300 mb-1.5">Nom d'utilisateur</label>
+          <input id="login-username" type="text" value="admin" autocomplete="username"
+            class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white
+              placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-300 mb-1.5">Mot de passe</label>
+          <input id="login-password" type="password" autocomplete="current-password"
+            placeholder="••••••••"
+            class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white
+              placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors" />
+        </div>
+        <p id="login-error" class="hidden text-red-400 text-sm text-center">Identifiants incorrects.</p>
+        <button type="submit"
+          class="w-full py-3 bg-green-500 hover:bg-green-400 text-black font-black rounded-xl
+            transition-all duration-200 active:scale-95 mt-2">
+          Se connecter
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       DASHBOARD (hidden until login)
+  ══════════════════════════════════════════ -->
+  <div id="dashboard" class="hidden">
+
+    <!-- ── Top Navbar ── -->
+    <nav class="sticky top-0 z-30 bg-gray-950/95 backdrop-blur border-b border-gray-800 px-5 py-4
+        flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-green-400 text-xl">⚡</span>
+        <span class="font-black text-white text-lg">ZAVIX<span class="text-green-400">STORE</span>
+          <span class="text-gray-500 font-normal text-sm ml-2">Admin</span></span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="last-updated" class="text-gray-500 text-xs hidden sm:inline">—</span>
+        
+        <button id="export-btn"
+          class="flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300
+            border border-blue-800 hover:border-blue-600 px-3 py-1.5 rounded-lg transition-all">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Export CSV
+        </button>
+
+        <button id="refresh-btn"
+          class="flex items-center gap-1.5 text-sm text-green-400 hover:text-green-300
+            border border-green-800 hover:border-green-600 px-3 py-1.5 rounded-lg transition-all">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Actualiser
+        </button>
+        <button id="logout-btn"
+          class="text-sm text-gray-400 hover:text-red-400 border border-gray-700 hover:border-red-800
+            px-3 py-1.5 rounded-lg transition-all">
+          Déconnexion
+        </button>
+      </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+
+      <!-- ── KPI Cards ── -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <!-- Total orders -->
+        <div class="stat-card border border-gray-800 rounded-2xl p-5">
+          <p class="text-gray-400 text-xs font-semibold uppercase tracking-wide mb-2">Total Commandes</p>
+          <p id="kpi-total" class="text-3xl font-black text-white">—</p>
+          <p class="text-gray-500 text-xs mt-1">Toutes périodes</p>
+        </div>
+        <!-- Revenue -->
+        <div class="stat-card border border-gray-800 rounded-2xl p-5">
+          <p class="text-gray-400 text-xs font-semibold uppercase tracking-wide mb-2">CA Livré</p>
+          <p id="kpi-revenue" class="text-3xl font-black text-green-400">—</p>
+          <p class="text-gray-500 text-xs mt-1">DZD (Livrées)</p>
+        </div>
+        <!-- Pending -->
+        <div class="stat-card border border-gray-800 rounded-2xl p-5">
+          <p class="text-gray-400 text-xs font-semibold uppercase tracking-wide mb-2">En Attente</p>
+          <p id="kpi-pending" class="text-3xl font-black text-yellow-400">—</p>
+          <p class="text-gray-500 text-xs mt-1">À confirmer</p>
+        </div>
+        <!-- Return rate -->
+        <div class="stat-card border border-gray-800 rounded-2xl p-5">
+          <p class="text-gray-400 text-xs font-semibold uppercase tracking-wide mb-2">Taux Retour</p>
+          <p id="kpi-return" class="text-3xl font-black text-red-400">—</p>
+          <p class="text-gray-500 text-xs mt-1">% des livrées</p>
+        </div>
+      </div>
+
+      <!-- ── Filters ── -->
+      <div class="flex flex-wrap gap-3 items-center">
+        <div class="flex gap-2 flex-wrap">
+          <button data-filter="all"
+            class="filter-btn active text-xs font-bold px-4 py-2 rounded-lg border
+              border-green-600 bg-green-600/10 text-green-400 transition-all">
+            Toutes
+          </button>
+          <button data-filter="pending"   class="filter-btn text-xs font-bold px-4 py-2 rounded-lg border border-gray-700 text-gray-400 hover:border-yellow-700 hover:text-yellow-400 transition-all">En attente</button>
+          <button data-filter="confirmed" class="filter-btn text-xs font-bold px-4 py-2 rounded-lg border border-gray-700 text-gray-400 hover:border-blue-700 hover:text-blue-400 transition-all">Confirmées</button>
+          <button data-filter="shipped"   class="filter-btn text-xs font-bold px-4 py-2 rounded-lg border border-gray-700 text-gray-400 hover:border-purple-700 hover:text-purple-400 transition-all">Expédiées</button>
+          <button data-filter="delivered" class="filter-btn text-xs font-bold px-4 py-2 rounded-lg border border-gray-700 text-gray-400 hover:border-green-700 hover:text-green-400 transition-all">Livrées</button>
+          <button data-filter="returned"  class="filter-btn text-xs font-bold px-4 py-2 rounded-lg border border-gray-700 text-gray-400 hover:border-red-700 hover:text-red-400 transition-all">Retournées</button>
+        </div>
+        <input id="search-input" type="text" placeholder="🔍 Rechercher nom, téléphone, wilaya…"
+          class="ml-auto flex-1 min-w-[200px] max-w-xs bg-gray-800 border border-gray-700 rounded-lg
+            px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none
+            focus:border-green-500 transition-colors" />
+      </div>
+
+      <!-- ── Orders Table ── -->
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden shadow-xl">
+        <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+          <h2 class="font-black text-white text-base">📋 Commandes</h2>
+          <span id="orders-count" class="text-xs text-gray-400 font-semibold">— résultats</span>
+        </div>
+
+        <!-- Desktop table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm hidden sm:table">
+            <thead class="bg-gray-800/60 text-gray-400 text-xs uppercase tracking-wider">
+              <tr>
+                <th class="text-left px-4 py-3">ID</th>
+                <th class="text-left px-4 py-3">Client</th>
+                <th class="text-left px-4 py-3">Téléphone</th>
+                <th class="text-left px-4 py-3">Wilaya</th>
+                <th class="text-left px-4 py-3">Produits</th>
+                <th class="text-right px-4 py-3">Total</th>
+                <th class="text-left px-4 py-3">Date</th>
+                <th class="text-center px-4 py-3">Statut</th>
+              </tr>
+            </thead>
+            <tbody id="orders-tbody" class="divide-y divide-gray-800">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+
+          <!-- Mobile cards -->
+          <div id="orders-mobile" class="sm:hidden divide-y divide-gray-800">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Empty state -->
+        <div id="orders-empty" class="hidden py-16 text-center">
+          <p class="text-4xl mb-3">📭</p>
+          <p class="text-gray-400 text-sm">Aucune commande trouvée.</p>
+        </div>
+
+        <!-- Loading state -->
+        <div id="orders-loading" class="py-12 text-center">
+          <div class="inline-block w-8 h-8 border-4 border-green-500 border-t-transparent
+              rounded-full animate-spin mb-3"></div>
+          <p class="text-gray-400 text-sm">Chargement des commandes…</p>
+        </div>
+      </div>
+
+    </main>
+  </div><!-- /dashboard -->
+
+  <!-- ══════════════════════════════════════════
+       SCRIPTS
+  ══════════════════════════════════════════ -->
+  <script>
+  (function () {
+    'use strict';
+
+    /* ─────────────────────────────────────────────
+     *  CONFIG — match with store.config.js
+     * ───────────────────────────────────────────── */
+    const SUPABASE_URL   = 'https://waypqvvirfenklicfzmw.supabase.co';
+    const SUPABASE_ANON  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndheXBxdnZpcmZlbmtsaWNmem13Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMDg5MTcsImV4cCI6MjA5NjY4NDkxN30.0hucvFK8ty4RtcWeC1ImnNO8gAw25RxV2x_cP8GDos8';
+    const ADMIN_TOKEN    = 'zavix_secure_token_2026_final';
+    const ADMIN_HASH     = '57aab5dbddf62d5be0118a936d1e0ff99bb787a92e4164e4abec961f5e0d4ec3';
+
+    /* ─────────────────────────────────────────────
+     *  STATE
+     * ───────────────────────────────────────────── */
+    let allOrders       = [];
+    let activeFilter    = 'all';
+    let searchQuery     = '';
+    let currentOrderIdx = null;
+
+    /* ─────────────────────────────────────────────
+     *  DOM REFS
+     * ───────────────────────────────────────────── */
+    const loginOverlay  = document.getElementById('login-overlay');
+    const loginForm     = document.getElementById('login-form');
+    const loginError    = document.getElementById('login-error');
+    const dashboard     = document.getElementById('dashboard');
+    const ordersLoading = document.getElementById('orders-loading');
+    const ordersEmpty   = document.getElementById('orders-empty');
+    const ordersTbody   = document.getElementById('orders-tbody');
+    const ordersMobile  = document.getElementById('orders-mobile');
+    const ordersCount   = document.getElementById('orders-count');
+    const searchInput   = document.getElementById('search-input');
+
+    /* ─────────────────────────────────────────────
+     *  CRYPTO
+     * ───────────────────────────────────────────── */
+    async function sha256(str) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    /* ─────────────────────────────────────────────
+     *  MOCK DATA (used when Supabase not configured)
+     * ───────────────────────────────────────────── */
+    function getMockOrders() {
+      const stored = localStorage.getItem('zavix_orders');
+      if (stored) {
+        try { return JSON.parse(stored); } catch { /* fall through */ }
+      }
+      
+      const statuses = ['pending','confirmed','shipped','delivered','returned'];
+      const wilayas  = ['Alger','Oran','Constantine','Sétif','Blida','Annaba','Tizi Ouzou','Béjaïa','Biskra','Batna'];
+      const firstNames = ['Mohamed','Yacine','Fatima','Amel','Riad','Karim','Sara','Nour','Amina','Bilal','Idir','Sonia'];
+      const lastNames = ['Benali','Kaci','Saidi','Brahimi','Mansouri','Touati','Zitouni','Haddad','Meziane','Hamdi'];
+      const prefixes = ['05','06','07'];
+      const itemsList = [
+        [{ name:'Spiruline Bio', qty:1, price:3500 }],
+        [{ name:'Ashwagandha Premium', qty:1, price:4500 }],
+        [{ name:'Pack Énergie Max', qty:1, price:6900 }],
+        [{ name:'Spiruline Bio', qty:2, price:3500 }],
+        [{ name:'Spiruline Bio', qty:1, price:3500 }, { name:'Ashwagandha Premium', qty:1, price:4500 }]
+      ];
+      const shippingOptions = [400, 500, 600, 800, 1000, 1200, 1500];
+
+      return Array.from({ length: 25 }, (_, i) => {
+        const items    = itemsList[i % itemsList.length];
+        const subtotal = items.reduce((s, it) => s + it.price * it.qty, 0);
+        const shipping = shippingOptions[i % shippingOptions.length];
+        const date     = new Date(Date.now() - Math.floor(Math.random() * 7 * 24 * 3600 * 1000));
+        
+        return {
+          order_id:      'ZVX-' + (1000 + i),
+          customer_name: firstNames[i % firstNames.length] + ' ' + lastNames[i % lastNames.length],
+          phone:         prefixes[i % 3] + String(50000000 + i * 12345).padStart(8,'0'),
+          wilaya_name:   wilayas[i % wilayas.length],
+          delivery_type: i % 2 === 0 ? 'domicile' : 'stopDesk',
+          items,
+          subtotal,
+          shipping,
+          total:  subtotal + shipping,
+          status: statuses[i % statuses.length],
+          created_at: date.toISOString()
+        };
+      }).sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+    }
+
+    /* ─────────────────────────────────────────────
+     *  DATA LOADING
+     * ───────────────────────────────────────────── */
+    async function loadOrders() {
+      ordersLoading.classList.remove('hidden');
+      ordersEmpty.classList.add('hidden');
+      ordersTbody.innerHTML = '';
+      ordersMobile.innerHTML = '';
+
+      // Try Supabase
+      if (SUPABASE_URL && SUPABASE_ANON) {
+        try {
+          const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/zavix_orders?order=created_at.desc&limit=500`,
+            {
+              headers: {
+                'apikey':        SUPABASE_ANON,
+                'Authorization': 'Bearer ' + SUPABASE_ANON,
+                'X-Zavix-Token': ADMIN_TOKEN
+              }
+            }
+          );
+          if (!res.ok) throw new Error('Supabase ' + res.status);
+          allOrders = await res.json();
+        } catch (err) {
+          console.warn('[Dashboard] Supabase failed, using local:', err.message);
+          allOrders = getMockOrders();
+        }
+      } else {
+        allOrders = getMockOrders();
+      }
+
+      ordersLoading.classList.add('hidden');
+      computeKPIs();
+      updateFilterCounts();
+      renderOrders();
+      updateLastUpdated();
+    }
+
+    /* ─────────────────────────────────────────────
+     *  KPI CALCULATOR
+     * ───────────────────────────────────────────── */
+    function computeKPIs() {
+      const total     = allOrders.length;
+      const delivered = allOrders.filter(o => o.status === 'delivered');
+      const returned  = allOrders.filter(o => o.status === 'returned');
+      const pending   = allOrders.filter(o => o.status === 'pending').length;
+      const revenue   = delivered.reduce((s, o) => s + (o.total || 0), 0);
+      const returnRate = delivered.length > 0
+        ? ((returned.length / delivered.length) * 100).toFixed(1)
+        : '0.0';
+
+      document.getElementById('kpi-total').textContent   = total;
+      document.getElementById('kpi-revenue').textContent = revenue.toLocaleString('fr-DZ') + ' DZD';
+      document.getElementById('kpi-pending').textContent = pending;
+      document.getElementById('kpi-return').textContent  = returnRate + '%';
+    }
+
+    function updateFilterCounts() {
+      const counts = { all: allOrders.length, pending: 0, confirmed: 0, shipped: 0, delivered: 0, returned: 0 };
+      allOrders.forEach(o => {
+        if (counts[o.status] !== undefined) counts[o.status]++;
+      });
+      document.querySelector('[data-filter="all"]').textContent = `Toutes (${counts.all})`;
+      document.querySelector('[data-filter="pending"]').textContent = `En attente (${counts.pending})`;
+      document.querySelector('[data-filter="confirmed"]').textContent = `Confirmées (${counts.confirmed})`;
+      document.querySelector('[data-filter="shipped"]').textContent = `Expédiées (${counts.shipped})`;
+      document.querySelector('[data-filter="delivered"]').textContent = `Livrées (${counts.delivered})`;
+      document.querySelector('[data-filter="returned"]').textContent = `Retournées (${counts.returned})`;
+    }
+
+    /* ─────────────────────────────────────────────
+     *  STATUS BADGE HTML
+     * ───────────────────────────────────────────── */
+    const STATUS_LABELS = {
+      pending:   'En attente',
+      confirmed: 'Confirmée',
+      shipped:   'Expédiée',
+      delivered: 'Livrée',
+      returned:  'Retournée'
+    };
+
+    function statusBadge(status) {
+      const label = STATUS_LABELS[status] || status;
+      return `<span class="status-badge status-${status}">${label}</span>`;
+    }
+
+    function statusSelect(orderId, currentStatus) {
+      const options = Object.entries(STATUS_LABELS).map(([val, label]) =>
+        `<option value="${val}" ${val === currentStatus ? 'selected' : ''}>${label}</option>`
+      ).join('');
+      return `
+        <select data-order-id="${orderId}"
+          class="status-select text-xs bg-gray-800 border border-gray-700 rounded-lg
+            px-2 py-1.5 text-white focus:outline-none focus:border-green-500 w-full mt-1">
+          ${options}
+        </select>`;
+    }
+
+    /* ─────────────────────────────────────────────
+     *  ITEM SUMMARY
+     * ───────────────────────────────────────────── */
+    function itemsSummary(items) {
+      if (!Array.isArray(items)) return '—';
+      return items.map(i => `${i.name} ×${i.qty}`).join(', ');
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '—';
+      try {
+        const d = new Date(iso);
+        return d.toLocaleDateString('fr-DZ', { day:'2-digit', month:'2-digit', year:'2-digit' })
+          + ' ' + d.toLocaleTimeString('fr-DZ', { hour:'2-digit', minute:'2-digit' });
+      } catch { return iso; }
+    }
+
+    /* ─────────────────────────────────────────────
+     *  RENDER ORDERS
+     * ───────────────────────────────────────────── */
+    function getFilteredOrders() {
+      return allOrders.filter(o => {
+        const matchFilter = activeFilter === 'all' || o.status === activeFilter;
+        if (!searchQuery) return matchFilter;
+        const q = searchQuery.toLowerCase();
+        return matchFilter && (
+          (o.customer_name || '').toLowerCase().includes(q) ||
+          (o.phone         || '').includes(q) ||
+          (o.wilaya_name   || '').toLowerCase().includes(q) ||
+          (o.order_id      || '').toLowerCase().includes(q)
+        );
+      });
+    }
+
+    function renderOrders() {
+      const filtered = getFilteredOrders();
+      ordersCount.textContent = `${filtered.length} résultat${filtered.length !== 1 ? 's' : ''}`;
+
+      if (filtered.length === 0) {
+        ordersEmpty.classList.remove('hidden');
+        ordersTbody.innerHTML  = '';
+        ordersMobile.innerHTML = '';
+        return;
+      }
+      ordersEmpty.classList.add('hidden');
+
+      // ── Desktop rows ──
+      ordersTbody.innerHTML = filtered.map((o, idx) => `
+        <tr class="hover:bg-gray-800/40 transition-colors">
+          <td class="px-4 py-3 font-mono text-green-400 text-xs whitespace-nowrap">${o.order_id || '—'}</td>
+          <td class="px-4 py-3 font-semibold text-white whitespace-nowrap">${o.customer_name || '—'}</td>
+          <td class="px-4 py-3 text-gray-300 whitespace-nowrap">${o.phone || '—'}</td>
+          <td class="px-4 py-3 text-gray-300 whitespace-nowrap">${o.wilaya_name || '—'}</td>
+          <td class="px-4 py-3 text-gray-400 text-xs max-w-[180px] truncate" title="${itemsSummary(o.items)}">${itemsSummary(o.items)}</td>
+          <td class="px-4 py-3 text-right font-bold text-white whitespace-nowrap">${(o.total || 0).toLocaleString('fr-DZ')} DZD</td>
+          <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">${formatDate(o.created_at)}</td>
+          <td class="px-4 py-3 text-center min-w-[140px]">
+            ${statusBadge(o.status)}
+            ${statusSelect(o.order_id || idx, o.status)}
+          </td>
+        </tr>
+      `).join('');
+
+      // ── Mobile cards ──
+      ordersMobile.innerHTML = filtered.map((o, idx) => `
+        <div class="p-4 space-y-2">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="font-bold text-white text-sm">${o.customer_name || '—'}</p>
+              <p class="text-gray-400 text-xs">${o.phone || '—'} · ${o.wilaya_name || '—'}</p>
+            </div>
+            <div class="text-right flex-shrink-0">
+              <p class="font-black text-green-400 text-sm">${(o.total || 0).toLocaleString('fr-DZ')} DZD</p>
+              <p class="text-gray-500 text-xs">${formatDate(o.created_at)}</p>
+            </div>
+          </div>
+          <p class="text-gray-400 text-xs truncate">${itemsSummary(o.items)}</p>
+          <div class="flex items-center gap-2">
+            ${statusBadge(o.status)}
+            <span class="text-gray-500 text-xs font-mono">${o.order_id || ''}</span>
+          </div>
+          ${statusSelect(o.order_id || idx, o.status)}
+        </div>
+      `).join('');
+    }
+
+    /* ─────────────────────────────────────────────
+     *  STATUS UPDATE
+     * ───────────────────────────────────────────── */
+    async function updateStatus(orderId, newStatus) {
+      // Update locally
+      const order = allOrders.find(o => o.order_id === orderId);
+      if (order) order.status = newStatus;
+      computeKPIs();
+      updateFilterCounts();
+
+      // Persist to localStorage
+      localStorage.setItem('zavix_orders', JSON.stringify(allOrders));
+
+      // Update Supabase if configured
+      if (SUPABASE_URL && SUPABASE_ANON) {
+        try {
+          await fetch(
+            `${SUPABASE_URL}/rest/v1/zavix_orders?order_id=eq.${encodeURIComponent(orderId)}`,
+            {
+              method:  'PATCH',
+              headers: {
+                'apikey':          SUPABASE_ANON,
+                'Authorization':   'Bearer ' + SUPABASE_ANON,
+                'Content-Type':    'application/json',
+                'X-Zavix-Token':   ADMIN_TOKEN
+              },
+              body: JSON.stringify({ status: newStatus })
+            }
+          );
+        } catch (err) {
+          console.warn('[Dashboard] Status sync failed:', err.message);
+        }
+      }
+    }
+
+    /* ─────────────────────────────────────────────
+     *  LAST UPDATED TIMESTAMP
+     * ───────────────────────────────────────────── */
+    function updateLastUpdated() {
+      const el = document.getElementById('last-updated');
+      if (el) {
+        el.classList.remove('hidden');
+        el.textContent = 'MAJ: ' + new Date().toLocaleTimeString('fr-DZ', { hour:'2-digit', minute:'2-digit' });
+      }
+    }
+
+    /* ─────────────────────────────────────────────
+     *  LOGIN
+     * ───────────────────────────────────────────── */
+    async function attemptLogin(username, password) {
+      if (username === 'admin') {
+        const hash = await sha256(password);
+        if (hash === ADMIN_HASH) {
+          sessionStorage.setItem('zavix_admin_auth', '1');
+          loginOverlay.classList.add('hidden');
+          dashboard.classList.remove('hidden');
+          loadOrders();
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function checkExistingSession() {
+      if (sessionStorage.getItem('zavix_admin_auth') === '1') {
+        loginOverlay.classList.add('hidden');
+        dashboard.classList.remove('hidden');
+        loadOrders();
+      }
+    }
+
+    /* ─────────────────────────────────────────────
+     *  EVENT BINDINGS
+     * ───────────────────────────────────────────── */
+    loginForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value;
+      const ok = await attemptLogin(username, password);
+      loginError.classList.toggle('hidden', ok);
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      sessionStorage.removeItem('zavix_admin_auth');
+      loginOverlay.classList.remove('hidden');
+      dashboard.classList.add('hidden');
+      document.getElementById('login-password').value = '';
+    });
+
+    document.getElementById('refresh-btn').addEventListener('click', loadOrders);
+
+    document.getElementById('export-btn').addEventListener('click', () => {
+      const filtered = getFilteredOrders();
+      if (!filtered.length) return alert('Aucune commande à exporter.');
+      
+      const headers = ['ID', 'Date', 'Client', 'Téléphone', 'Wilaya', 'Produits', 'Total (DZD)', 'Statut'];
+      const rows = filtered.map(o => [
+        o.order_id || '',
+        o.created_at ? new Date(o.created_at).toLocaleString('fr-DZ') : '',
+        `"${o.customer_name || ''}"`,
+        `"${o.phone || ''}"`,
+        `"${o.wilaya_name || o.wilaya || ''}"`,
+        `"${itemsSummary(o.items)}"`,
+        o.total || 0,
+        o.status || ''
+      ]);
+      
+      const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `zavix_commandes_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+
+    // Filter buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeFilter = btn.dataset.filter;
+        document.querySelectorAll('.filter-btn').forEach(b => {
+          b.classList.remove('border-green-600','bg-green-600/10','text-green-400');
+          b.classList.add('border-gray-700','text-gray-400');
+        });
+        btn.classList.add('border-green-600','bg-green-600/10','text-green-400');
+        btn.classList.remove('border-gray-700','text-gray-400');
+        renderOrders();
+      });
+    });
+
+    // Search
+    searchInput.addEventListener('input', () => {
+      searchQuery = searchInput.value;
+      renderOrders();
+    });
+
+    // Status change (delegated)
+    document.addEventListener('change', e => {
+      const sel = e.target.closest('.status-select');
+      if (sel) updateStatus(sel.dataset.orderId, sel.value);
+    });
+
+    // Auto-refresh every 60s
+    setInterval(loadOrders, 60000);
+
+    /* ─────────────────────────────────────────────
+     *  INIT
+     * ───────────────────────────────────────────── */
+    checkExistingSession();
+
+  })();
+  </script>
+
+</body>
+</html>
